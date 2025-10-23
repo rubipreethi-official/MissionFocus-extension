@@ -346,7 +346,7 @@ If something isn't working:
 2. Check the **YouTube console** (F12)
 3. Try **reloading the extension**
 4. Try **clearing storage** and reconfiguring
-
+(copy of main branch //safer side ku)
 ---
 
 ## 🚀 You're All Set!
