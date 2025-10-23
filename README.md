@@ -21,4 +21,3 @@ A Chrome extension that intelligently tracks your YouTube viewing time and categ
 
 HAPPY LIFE! PRODUCTIVE LIFE:)
                 - Rubi Preethi
-<img src="![alt text](android-chrome-192x192.png)" alt="logo" > Mission Focus Extension
