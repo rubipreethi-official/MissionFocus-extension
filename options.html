@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mission Focus - Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 32px;
+      text-align: center;
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    label {
+      display: block;
+      margin: 25px 0 10px 0;
+      color: #333;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    
+    textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 90px;
+      transition: all 0.3s;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .time-inputs {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    .time-input-group {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .time-inputs input {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 20px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    
+    .time-inputs input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .time-separator {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+      padding: 0 5px;
+    }
+    
+    .time-label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    
+    button {
+      width: 100%;
+      padding: 16px;
+      margin-top: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(-1px);
+    }
+    
+    #status {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 600;
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+    
+    #status.show {
+      display: block;
+    }
+    
+    #status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 2px solid #10b981;
+    }
+    
+    #status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 2px solid #ef4444;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .example-box {
+      background: #f0f4ff;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .example-box strong {
+      color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Mission Focus Setup</h1>
+    <p class="subtitle">Configure your productivity tracking preferences</p>
+    
+    <label>📚 Your Focus Areas</label>
+    <textarea 
+      id="focusAreas" 
+      placeholder="e.g., programming, web development, fitness, cooking, education"
+    ></textarea>
+    <div class="help-text">
+      Enter comma-separated topics that define productive content for you.
+      <div class="example-box">
+        <strong>Example:</strong> "programming, coding, javascript, react, nextjs, web development"
+      </div>
+    </div>
+
+    <label>✅ Daily Productive Goal</label>
+    <div class="time-inputs">
+      <div class="time-input-group">
+        <input type="number" id="prodHours" min="0" max="23" value="0" placeholder="00">
+        <div class="time-label">Hours</div>
+      </div>
+      <span class="time-separator">:</span>
+      <div class="time-input-group">
+        <input type="number" id="prodMinutes" min="0" max="59" value="0" placeholder="00">
+        <div class="time-label">Minutes</div>
+      </div>
+      <span class="time-separator">:</span>
+      <div class="time-input-group">
+        <input type="number" id="prodSeconds" min="0" max="59" value="0" placeholder="00">
+        <div class="time-label">Seconds</div>
+      </div>
+    </div>
+    <div class="help-text">
+      You'll receive encouragement when you reach 50% and 100% of this goal.
+    </div>
+
+    <label>⚠️ Daily Unproductive Limit</label>
+    <div class="time-inputs">
+      <div class="time-input-group">
+        <input type="number" id="unprodHours" min="0" max="23" value="0" placeholder="00">
+        <div class="time-label">Hours</div>
+      </div>
+      <span class="time-separator">:</span>
+      <div class="time-input-group">
+        <input type="number" id="unprodMinutes" min="0" max="59" value="0" placeholder="00">
+        <div class="time-label">Minutes</div>
+      </div>
+      <span class="time-separator">:</span>
+      <div class="time-input-group">
+        <input type="number" id="unprodSeconds" min="0" max="59" value="0" placeholder="00">
+        <div class="time-label">Seconds</div>
+      </div>
+    </div>
+    <div class="help-text">
+      You'll receive an alert when you exceed this limit.
+    </div>
+    
+    <button id="save">💾 Save & Start Tracking</button>
+    <div id="status"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mission Focus</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      width: 340px;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    h2 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    
+    .stat-box {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+    }
+    
+    .stat-box:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      margin: 8px 0;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 2px;
+    }
+    
+    .productive {
+      border-left: 5px solid #4ade80;
+    }
+    
+    .unproductive {
+      border-left: 5px solid #f87171;
+    }
+    
+    .progress-bar {
+      background: rgba(255, 255, 255, 0.25);
+      height: 8px;
+      border-radius: 4px;
+      margin-top: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    
+    .progress-fill.productive {
+      background: linear-gradient(90deg, #4ade80, #22c55e);
+      box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+    }
+    
+    .progress-fill.unproductive {
+      background: linear-gradient(90deg, #f87171, #ef4444);
+      box-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
+    }
+    
+    .limit-text {
+      font-size: 11px;
+      margin-top: 8px;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+    
+    button {
+      width: 100%;
+      padding: 14px;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .reset-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      backdrop-filter: blur(10px);
+    }
+    
+    .reset-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 10px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <h2>📊 Mission Focus</h2>
+  
+  <div class="stat-box productive">
+    <div class="stat-label">✅ Productive Time</div>
+    <div class="stat-value" id="prodTime">00:00:00</div>
+    <div class="progress-bar">
+      <div class="progress-fill productive" id="prodProgress" style="width: 0%"></div>
+    </div>
+    <div class="limit-text" id="prodLimit">Goal: 00:00:00</div>
+  </div>
+  
+  <div class="stat-box unproductive">
+    <div class="stat-label">⏰ Unproductive Time</div>
+    <div class="stat-value" id="unprodTime">00:00:00</div>
+    <div class="progress-bar">
+      <div class="progress-fill unproductive" id="unprodProgress" style="width: 0%"></div>
+    </div>
+    <div class="limit-text" id="unprodLimit">Limit: 00:00:00</div>
+  </div>
+  
+  <button id="openOptions">⚙️ Settings</button>
+  <button class="reset-btn" id="resetTime">🔄 Reset Today's Stats</button>
+  
+  <div class="footer">Stay focused and productive! 🚀</div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
