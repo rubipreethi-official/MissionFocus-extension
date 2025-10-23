@@ -8,7 +8,9 @@ const state = {
   isYouTubeVideo: false,
   updateInterval: null,
   lastNotificationTime: 0,
-  notificationCooldown: 300000 // 5 minutes
+  notificationCooldown: 300000, // 5 minutes
+  timerPaused: false, // NEW: pause state
+  alertsShown: { unproductive: false, halfway: false, fullGoal: false } // NEW: track shown alerts
 };
 
 function storageGet(keys) {
@@ -43,6 +45,8 @@ async function initializeStorage() {
       state.productiveTime = 0;
       state.unproductiveTime = 0;
       state.today = currentDate;
+      // Reset alert flags on new day
+      state.alertsShown = { unproductive: false, halfway: false, fullGoal: false };
     } else {
       state.productiveTime = data.productiveTime || 0;
       state.unproductiveTime = data.unproductiveTime || 0;
@@ -69,14 +73,18 @@ async function saveState() {
 function startTimeUpdate() {
   if (state.updateInterval) clearInterval(state.updateInterval);
   state.startTime = Date.now();
+  state.timerPaused = false; // Resume timer
+  
   state.updateInterval = setInterval(async () => {
-    if (!state.startTime || !state.currentCategory) return;
+    if (!state.startTime || !state.currentCategory || state.timerPaused) return; // Check pause state
+    
     const elapsedMinutes = (Date.now() - state.startTime) / 60000;
     if (state.currentCategory === 'productive') state.productiveTime += elapsedMinutes;
     else if (state.currentCategory === 'unproductive') state.unproductiveTime += elapsedMinutes;
+    
     state.startTime = Date.now();
     await saveState();
-    await checkTimeAlerts(state.currentCategory);
+    await checkTimeAlertsRealtime(); // NEW: Check alerts every second
   }, 1000);
 }
 
@@ -85,7 +93,7 @@ function stopTimeUpdate() {
     clearInterval(state.updateInterval);
     state.updateInterval = null;
   }
-  if (state.startTime && state.currentCategory) {
+  if (state.startTime && state.currentCategory && !state.timerPaused) {
     const elapsedMinutes = (Date.now() - state.startTime) / 60000;
     if (state.currentCategory === 'productive') state.productiveTime += elapsedMinutes;
     else if (state.currentCategory === 'unproductive') state.unproductiveTime += elapsedMinutes;
@@ -99,16 +107,65 @@ function showNotification(title, message) {
   try {
     const options = {
       type: 'basic',
-      iconUrl: 'icons/icon128.png',
+      iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       title,
       message,
-      priority: 2
+      priority: 2,
+      requireInteraction: false
     };
     chrome.notifications.create('mission-focus-' + Date.now(), options, (id) => {
-      if (!chrome.runtime.lastError) setTimeout(() => chrome.notifications.clear(id), 8000);
+      if (!chrome.runtime.lastError) setTimeout(() => chrome.notifications.clear(id), 10000);
     });
+    console.log('🔔 Notification:', title);
   } catch (e) {
     console.error('Notification error:', e);
+  }
+}
+
+// NEW: Real-time alert checking (called every second)
+async function checkTimeAlertsRealtime() {
+  try {
+    const data = await storageGet(['prodLimit', 'unprodLimit']);
+    const limits = {
+      productive: data.prodLimit || 120,
+      unproductive: data.unprodLimit || 30
+    };
+    
+    // Unproductive alert
+    if (state.currentCategory === 'unproductive' && 
+        state.unproductiveTime >= limits.unproductive && 
+        !state.alertsShown.unproductive) {
+      state.alertsShown.unproductive = true;
+      showNotification(
+        '⚠️ Unproductive Alert', 
+        `You've reached your limit. Time to focus!`
+      );
+    }
+    
+    // Productive milestones
+    if (state.currentCategory === 'productive') {
+      const halfGoal = limits.productive * 0.5;
+      
+      // 50% milestone
+      if (state.productiveTime >= halfGoal && !state.alertsShown.halfway) {
+        state.alertsShown.halfway = true;
+        showNotification(
+          '🎉 Halfway There!', 
+          `Great job! You're at ${Math.round(state.productiveTime)} minutes. Keep going!`
+        );
+      }
+      
+      // 100% milestone
+      if (state.productiveTime >= limits.productive && !state.alertsShown.fullGoal) {
+        state.alertsShown.fullGoal = true;
+        showNotification(
+          '🏆 Goal Achieved!', 
+          `Awesome! You've reached your ${Math.round(limits.productive)}-minute goal!`
+        );
+      }
+    }
+  } catch (err) {
+    console.error('checkTimeAlertsRealtime error:', err);
   }
 }
 
@@ -146,7 +203,7 @@ function checkTab(tabId) {
         return;
       }
       const url = tab.url;
-      if (url.includes('youtube.com/watch')) {
+      if (url.includes('youtube.com/watch') || url.includes('youtube.com/shorts')) { // NEW: Support shorts
         state.isYouTubeVideo = true;
         state.activeTabId = tabId;
         chrome.tabs.sendMessage(tabId, { action: 'checkVideo' }, (resp) => {
@@ -186,7 +243,7 @@ Return only that one word.
     const TIMEOUT_MS = 8000;
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,6 +298,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await handleReset();
           sendResponse({ success: true });
           break;
+        // NEW: Pause/resume handlers
+        case 'videoPaused':
+          console.log('⏸️ Video paused - waiting for user decision');
+          sendResponse({ success: true });
+          break;
+        case 'videoPlaying':
+          console.log('▶️ Video resumed');
+          state.timerPaused = false;
+          state.startTime = Date.now();
+          sendResponse({ success: true });
+          break;
+        case 'pauseTimer':
+          console.log('⏸️ User chose: Pause timer');
+          state.timerPaused = true;
+          if (state.startTime && state.currentCategory) {
+            const elapsed = (Date.now() - state.startTime) / 60000;
+            if (state.currentCategory === 'productive') state.productiveTime += elapsed;
+            else if (state.currentCategory === 'unproductive') state.unproductiveTime += elapsed;
+            await saveState();
+          }
+          sendResponse({ success: true });
+          break;
+        case 'keepTimer':
+          console.log('💭 User chose: Keep timer running');
+          state.timerPaused = false;
+          state.startTime = Date.now();
+          sendResponse({ success: true });
+          break;
         default:
           sendResponse(null);
           break;
@@ -269,6 +354,9 @@ async function handleReset() {
   state.unproductiveTime = 0;
   state.today = new Date().toDateString();
   state.lastNotificationTime = 0;
+  state.timerPaused = false;
+  // Reset alert flags
+  state.alertsShown = { unproductive: false, halfway: false, fullGoal: false };
   await saveState();
 }
 
