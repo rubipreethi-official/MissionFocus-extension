@@ -1,3 +1,4 @@
+// server.js - Mission Focus Backend API
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -10,26 +11,22 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection (with basic options and event handlers)
+// MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000
+  useUnifiedTopology: true
 })
 .then(() => console.log('✅ Connected to MongoDB'))
-.then(()=>console.log('Using DB:', mongoose.connection?.db?.databaseName || 'unknown'))
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err);
-  process.exit(1);
-});
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error event:', err);
-});
-mongoose.connection.on('disconnected', () => {
-  console.warn('MongoDB disconnected');
-});
+// Helper: Format minutes to hh:mm:ss
+function formatTime(minutes) {
+  const totalSeconds = Math.round(minutes * 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -66,6 +63,19 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Virtual fields for formatted time (for display)
+userSchema.virtual('productiveTimeFormatted').get(function() {
+  return formatTime(this.productiveTime);
+});
+
+userSchema.virtual('unproductiveTimeFormatted').get(function() {
+  return formatTime(this.unproductiveTime);
+});
+
+// Include virtuals in JSON
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
+
 const User = mongoose.model('User', userSchema);
 
 // ============================================
@@ -81,54 +91,65 @@ app.get('/', (req, res) => {
 app.post('/api/register', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
-
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' });
-
-    const normalizedEmail = String(email).toLowerCase().trim();
-    let user = await User.findOne({ email: normalizedEmail });
-
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
+    // Check if user exists
+    let user = await User.findOne({ email });
+    
     if (user) {
+      // Reset daily stats if new day
       const today = new Date().toDateString();
       if (user.today !== today) {
-        user.totalProductiveAllTime = (user.totalProductiveAllTime || 0) + (user.productiveTime || 0);
+        user.totalProductiveAllTime += user.productiveTime;
         user.productiveTime = 0;
         user.unproductiveTime = 0;
         user.today = today;
         user.hasSeenTopUserNotification = false;
         await user.save();
       }
-
-      return res.json({
-        message: 'Welcome back!',
+      
+      console.log('✅ User logged in:', email);
+      return res.json({ 
+        message: 'Welcome back!', 
         user: {
           email: user.email,
           productiveTime: user.productiveTime,
+          productiveTimeFormatted: user.productiveTimeFormatted,
           unproductiveTime: user.unproductiveTime,
+          unproductiveTimeFormatted: user.unproductiveTimeFormatted,
           totalProductiveAllTime: user.totalProductiveAllTime
         }
       });
     }
-
-    user = new User({ email: normalizedEmail });
+    
+    // Create new user
+    user = new User({ email });
     await user.save();
-
-    res.status(201).json({
-      message: 'User registered successfully!',
+    
+    console.log('✅ New user registered:', email);
+    res.status(201).json({ 
+      message: 'User registered successfully!', 
       user: {
         email: user.email,
         productiveTime: 0,
+        productiveTimeFormatted: '00:00:00',
         unproductiveTime: 0,
+        unproductiveTimeFormatted: '00:00:00',
         totalProductiveAllTime: 0
       }
     });
+    
   } catch (error) {
     console.error('Register error:', error);
-    // handle duplicate key error more gracefully
-    if (error && error.code === 11000) {
-      return res.status(409).json({ error: 'Email already exists' });
-    }
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -137,36 +158,49 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/update-time', async (req, res) => {
   try {
     const { email, productiveTime, unproductiveTime } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
-
-    const normalizedEmail = String(email).toLowerCase().trim();
-    const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(404).json({ error: 'User not found. Please register first.' });
-
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found. Please register first.' });
+    }
+    
     const today = new Date().toDateString();
+    
+    // Reset if new day
     if (user.today !== today) {
-      user.totalProductiveAllTime = (user.totalProductiveAllTime || 0) + (user.productiveTime || 0);
+      user.totalProductiveAllTime += user.productiveTime;
       user.productiveTime = 0;
       user.unproductiveTime = 0;
       user.today = today;
       user.hasSeenTopUserNotification = false;
     }
-
-    user.productiveTime = typeof productiveTime === 'number' ? productiveTime : user.productiveTime;
-    user.unproductiveTime = typeof unproductiveTime === 'number' ? unproductiveTime : user.unproductiveTime;
+    
+    // Update times
+    user.productiveTime = productiveTime || 0;
+    user.unproductiveTime = unproductiveTime || 0;
     user.lastUpdated = new Date();
-
+    
     await user.save();
-
-    res.json({
+    
+    console.log(`📊 Updated ${email}: Prod=${formatTime(user.productiveTime)}, Unprod=${formatTime(user.unproductiveTime)}`);
+    
+    res.json({ 
       message: 'Time updated successfully',
       user: {
         email: user.email,
         productiveTime: user.productiveTime,
+        productiveTimeFormatted: user.productiveTimeFormatted,
         unproductiveTime: user.unproductiveTime,
+        unproductiveTimeFormatted: user.unproductiveTimeFormatted,
         totalProductiveAllTime: user.totalProductiveAllTime
       }
     });
+    
   } catch (error) {
     console.error('Update time error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -176,38 +210,76 @@ app.post('/api/update-time', async (req, res) => {
 // Get user ranking (check if #1)
 app.get('/api/ranking/:email', async (req, res) => {
   try {
-    const email = String(req.params.email || '').toLowerCase().trim();
+    const { email } = req.params;
     const today = new Date().toDateString();
-
-    const users = await User.find({ today })
-      .sort({ productiveTime: -1 })
-      .select('email productiveTime hasSeenTopUserNotification')
-      .lean();
-
-    if (!users || users.length === 0) {
-      return res.json({ rank: 0, total: 0, isTopUser: false });
+    
+    // Get all users for today sorted by productive time (descending)
+    const users = await User.find({ 
+      today,
+      productiveTime: { $gt: 0 } // Only users with productive time > 0
+    })
+    .sort({ productiveTime: -1 })
+    .select('email productiveTime hasSeenTopUserNotification');
+    
+    console.log(`📊 Total users with productive time today: ${users.length}`);
+    
+    if (users.length === 0) {
+      return res.json({ 
+        rank: 0, 
+        total: 0, 
+        isTopUser: false, 
+        shouldNotify: false 
+      });
     }
-
-    const userIndex = users.findIndex(u => String(u.email).toLowerCase() === email);
-    if (userIndex === -1) return res.json({ rank: 0, total: users.length, isTopUser: false });
-
-    const rank = userIndex + 1;
+    
+    // Find user's rank
+    const userIndex = users.findIndex(u => u.email === email);
+    
+    if (userIndex === -1) {
+      return res.json({ 
+        rank: 0, 
+        total: users.length, 
+        isTopUser: false, 
+        shouldNotify: false 
+      });
+    }
+    
     const currentUser = users[userIndex];
-    const isTopUser = rank === 1 && (currentUser.productiveTime || 0) > 0;
-    const shouldNotify = isTopUser && !currentUser.hasSeenTopUserNotification;
-
+    const rank = userIndex + 1;
+    const isTopUser = rank === 1;
+    
+    // Should notify if:
+    // 1. User is #1
+    // 2. Has NOT seen notification today
+    // 3. Has more than 1 minute of productive time
+    const shouldNotify = isTopUser && 
+                         !currentUser.hasSeenTopUserNotification && 
+                         currentUser.productiveTime >= 1;
+    
+    console.log(`🏆 ${email}: Rank #${rank}/${users.length}, Prod Time: ${formatTime(currentUser.productiveTime)}, Should Notify: ${shouldNotify}`);
+    
+    // Mark notification as seen if showing
     if (shouldNotify) {
-      await User.updateOne({ email }, { $set: { hasSeenTopUserNotification: true } });
+      await User.updateOne(
+        { email },
+        { hasSeenTopUserNotification: true }
+      );
+      console.log(`🔔 Sending #1 notification to ${email}`);
     }
-
+    
     res.json({
       rank,
       total: users.length,
       isTopUser,
       shouldNotify,
-      productiveTime: Math.round(currentUser.productiveTime || 0),
-      topUser: users[0] ? { productiveTime: Math.round(users[0].productiveTime || 0) } : null
+      productiveTime: currentUser.productiveTime,
+      productiveTimeFormatted: formatTime(currentUser.productiveTime),
+      topUser: users[0] ? {
+        productiveTime: users[0].productiveTime,
+        productiveTimeFormatted: formatTime(users[0].productiveTime)
+      } : null
     });
+    
   } catch (error) {
     console.error('Ranking error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -218,116 +290,69 @@ app.get('/api/ranking/:email', async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const today = new Date().toDateString();
-    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
-
-    const leaderboard = await User.find({ today })
-      .sort({ productiveTime: -1 })
-      .limit(limit)
-      .select('email productiveTime totalProductiveAllTime')
-      .lean();
-
-    const maskedLeaderboard = leaderboard.map((user, index) => {
-      const emailParts = (user.email || '').split('@');
-      const domain = emailParts[1] || '';
-      const prefix = (emailParts[0] || '').substring(0, 3);
-      return {
-        rank: index + 1,
-        email: `${prefix || '***'}***@${domain}`,
-        productiveTime: Math.round(user.productiveTime || 0),
-        totalProductiveAllTime: Math.round(user.totalProductiveAllTime || 0)
-      };
-    });
-
-    res.json({
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const leaderboard = await User.find({ 
+      today,
+      productiveTime: { $gt: 0 }
+    })
+    .sort({ productiveTime: -1 })
+    .limit(limit)
+    .select('email productiveTime totalProductiveAllTime');
+    
+    // Mask email for privacy
+    const maskedLeaderboard = leaderboard.map((user, index) => ({
+      rank: index + 1,
+      email: user.email.substring(0, 3) + '***@' + user.email.split('@')[1],
+      productiveTime: user.productiveTime,
+      productiveTimeFormatted: formatTime(user.productiveTime),
+      totalProductiveAllTime: user.totalProductiveAllTime,
+      totalProductiveAllTimeFormatted: formatTime(user.totalProductiveAllTime)
+    }));
+    
+    res.json({ 
       leaderboard: maskedLeaderboard,
-      date: today
+      date: today,
+      total: leaderboard.length
     });
+    
   } catch (error) {
     console.error('Leaderboard error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Reset daily stats (called by cron job at midnight) - uses bulkWrite to preserve totals
+// Reset daily stats (called by cron job at midnight)
 app.post('/api/reset-daily', async (req, res) => {
   try {
     const today = new Date().toDateString();
-    const usersToReset = await User.find({ today: { $ne: today } }).select('productiveTime');
-
-    if (!usersToReset || usersToReset.length === 0) {
-      return res.json({ message: 'No users to reset', updated: 0 });
+    
+    const usersToReset = await User.find({ today: { $ne: today } });
+    
+    for (const user of usersToReset) {
+      user.totalProductiveAllTime += user.productiveTime;
+      user.productiveTime = 0;
+      user.unproductiveTime = 0;
+      user.today = today;
+      user.hasSeenTopUserNotification = false;
+      await user.save();
     }
-
-    const bulkOps = usersToReset.map(u => ({
-      updateOne: {
-        filter: { _id: u._id },
-        update: {
-          $inc: { totalProductiveAllTime: u.productiveTime || 0 },
-          $set: {
-            today,
-            hasSeenTopUserNotification: false,
-            productiveTime: 0,
-            unproductiveTime: 0
-          }
-        }
-      }
-    }));
-
-    const result = await User.bulkWrite(bulkOps);
-    res.json({ message: 'Daily reset complete', updated: result.modifiedCount || 0 });
+    
+    console.log(`🔄 Daily reset complete: ${usersToReset.length} users reset`);
+    
+    res.json({ 
+      message: 'Daily reset complete',
+      updated: usersToReset.length
+    });
+    
   } catch (error) {
     console.error('Reset error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Admin endpoint: list users (optionally masked)
-// Example: GET /api/users?mask=true
-app.get('/api/users', async (req, res) => {
-  try {
-    const mask = req.query.mask === 'true';
-    const users = await User.find({}).select('email productiveTime unproductiveTime totalProductiveAllTime today').lean();
-
-    const out = users.map(u => {
-      if (!mask) return u;
-      const emailParts = (u.email || '').split('@');
-      const domain = emailParts[1] || '';
-      const prefix = (emailParts[0] || '').substring(0, 3);
-      return {
-        ...u,
-        email: `${prefix || '***'}***@${domain}`
-      };
-    });
-
-    res.json({ users: out });
-  } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // Start server
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
-
-// Graceful shutdown
-async function shutdown() {
-  console.log('Shutting down...');
-  try {
-    await mongoose.connection.close(false);
-    server.close(() => {
-      console.log('Server closed');
-      process.exit(0);
-    });
-  } catch (err) {
-    console.error('Error during shutdown', err);
-    process.exit(1);
-  }
-}
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
+  console.log(`📊 View leaderboard: http://localhost:${PORT}/api/leaderboard`);
 });
