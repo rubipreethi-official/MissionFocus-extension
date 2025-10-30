@@ -22,7 +22,7 @@ We've all been there. You open YouTube to watch a quick tutorial on React hooks.
 
 **Sound familiar?**
 
-![Mindless Scrolling Problem](https://via.placeholder.com/800x400/FF6B6B/FFFFFF?text=2+Hours+Wasted+On+Unproductive+Content)
+![Mindless Scrolling Problem](https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop)
 
 ### The Statistics Are Alarming
 
@@ -254,8 +254,8 @@ Result: Stay motivated, learn proper form, achieve fitness goals
 
 ### 📚 For Students
 ```
-Area: "JEE Preparation, Physics, Mathematics"
-Goal: 6 hours of study content daily
+Area: "UPSC preparation, polity,Economy, History, Anthropology"
+Goal: 8 hours of study content daily
 Pause Detection: Solve problems while video is paused
 Result: Stay focused during exam prep, avoid distractions
 ```
