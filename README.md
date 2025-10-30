@@ -10,9 +10,7 @@ A browser extension that intelligently tracks your YouTube viewing time and cate
 
 > **Break free from mindless scrolling. Reclaim your time. Achieve your goals.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-blue.svg)](#)
-[![Made with Love](https://img.shields.io/badge/Made%20with-❤️-red.svg)](#)
+
 
 ---
 
@@ -181,27 +179,7 @@ Built with modern, robust technologies:
 
 ---
 
-## 📥 Installation
 
-### Load Unpacked Extension
-
-```bash
-# Clone or download the repository
-git clone https://github.com/yourusername/mission-focus.git
-
-# Navigate to project directory
-cd mission-focus
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Set up environment variables
-cp .env.example .env
-# Add your MongoDB URI and Gemini API key to .env file
-
-# Start the backend server
-npm start
 
 # Load the extension in Chrome
 # 1. Open chrome://extensions/
@@ -210,18 +188,7 @@ npm start
 # 4. Select the 'extension' folder from this project
 ```
 
-### Environment Variables
 
-Create a `.env` file in the backend folder:
-
-```env
-PORT=3000
-MONGODB_URI=your_mongodb_connection_string
-GEMINI_API_KEY=your_gemini_api_key
-NODE_ENV=development
-```
-
----
 
 ## 🎮 Quick Start Guide
 
@@ -267,7 +234,7 @@ When you pause a video to think:
 ---
 
 
-## 🎯 Use Cases
+## 🎯 Example  Use Cases
 
 ### 👨‍💻 For Developers
 ```
@@ -303,25 +270,6 @@ Result: Stay informed, make better decisions, grow career
 
 ---
 
-## 🧪 How We Detect Productivity
 
-### Multi-Layer Analysis
-
-```javascript
-// Layer 1: Keyword Matching
-const isProductive = videoTitle.includes(userProductivityArea);
-
-// Layer 2: Gemini AI Analysis
-const aiAnalysis = await gemini.analyzeContent({
-  videoTitle: "Building a REST API with Node.js",
-  videoDescription: "Complete tutorial on creating RESTful APIs...",
-  userGoal: "Web Development, Backend Programming"
-});
-
-// Layer 3: Pause Detection
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.audible === false && videoPaused) {
-    setTimeout(() => {
-      showNotification("Are you
 HAPPY LIFE! PRODUCTIVE LIFE:)
                 - Rubi Preethi
